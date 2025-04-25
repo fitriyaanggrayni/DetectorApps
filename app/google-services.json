@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "451480837317",
+    "firebase_url": "https://cobaskripsi-fdd8c-default-rtdb.firebaseio.com",
+    "project_id": "cobaskripsi-fdd8c",
+    "storage_bucket": "cobaskripsi-fdd8c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:451480837317:android:dd3d10cccc9dd3dc0924ac",
+        "android_client_info": {
+          "package_name": "com.example.insectdetector"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQ_Q6QEyPvrD-5Zt4I5bptfQF76yHQq3A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

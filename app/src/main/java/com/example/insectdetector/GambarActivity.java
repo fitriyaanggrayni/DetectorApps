@@ -199,19 +199,33 @@ public class GambarActivity extends AppCompatActivity {
     }
 
     private String parseDetectionOutput(float[][][] output) {
-        float confidenceThreshold = 0.5f;
+        float confidenceThreshold = 0.7f;
         StringBuilder result = new StringBuilder("Deteksi:\n");
 
         for (float[] detection : output[0]) {
-            float confidence = detection[4];
-            int classIndex = (int) detection[5];
+            float objectness = detection[4];
 
-            if (confidence > confidenceThreshold && classIndex >= 0 && classIndex < labels.size()) {
-                String label = labels.get(classIndex);
-                result.append(label)
-                        .append(" (")
-                        .append(String.format("%.2f", confidence * 100))
-                        .append("%)\n");
+            if (objectness > confidenceThreshold) {
+                // Cari kelas dengan skor tertinggi dari detection[5] dan seterusnya
+                float maxClassScore = 0;
+                int classIndex = -1;
+
+                for (int i = 5; i < detection.length; i++) {
+                    if (detection[i] > maxClassScore) {
+                        maxClassScore = detection[i];
+                        classIndex = i - 5; // karena indeks 5 ke atas adalah class
+                    }
+                }
+
+                float finalConfidence = objectness * maxClassScore;
+
+                if (finalConfidence > confidenceThreshold && classIndex >= 0 && classIndex < labels.size()) {
+                    String label = labels.get(classIndex);
+                    result.append(label)
+                            .append(" (")
+                            .append(String.format("%.2f", finalConfidence * 100))
+                            .append("%)\n");
+                }
             }
         }
 

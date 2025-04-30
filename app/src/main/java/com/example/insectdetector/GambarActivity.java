@@ -49,6 +49,8 @@ public class GambarActivity extends AppCompatActivity {
 
     private final String GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfEYCdK3_hgfS9A3TzJprOVETYkepVhFg8C1lQz8-tH8WkrQUJnz22GqDlT5RZYrcjxg/exec?func=ESP32CAM&ID_FOLDER=1bmf4fh86xDNUnPLwoC2jmmPPuId-1lKd";
 
+    private TextView txtJumlahDeteksi;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,6 +59,8 @@ public class GambarActivity extends AppCompatActivity {
         imgGambar = findViewById(R.id.imgGambar);
         txtFileName = findViewById(R.id.txtFileName);
         txtDetectionResult = findViewById(R.id.txtDetectionResult);
+        txtJumlahDeteksi = findViewById(R.id.txtJumlahDeteksi);
+
 
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
@@ -201,19 +205,19 @@ public class GambarActivity extends AppCompatActivity {
     private String parseDetectionOutput(float[][][] output) {
         float confidenceThreshold = 0.7f;
         StringBuilder result = new StringBuilder("Deteksi:\n");
+        int detectedCount = 0;
 
         for (float[] detection : output[0]) {
             float objectness = detection[4];
 
             if (objectness > confidenceThreshold) {
-                // Cari kelas dengan skor tertinggi dari detection[5] dan seterusnya
                 float maxClassScore = 0;
                 int classIndex = -1;
 
                 for (int i = 5; i < detection.length; i++) {
                     if (detection[i] > maxClassScore) {
                         maxClassScore = detection[i];
-                        classIndex = i - 5; // karena indeks 5 ke atas adalah class
+                        classIndex = i - 5;
                     }
                 }
 
@@ -225,12 +229,17 @@ public class GambarActivity extends AppCompatActivity {
                             .append(" (")
                             .append(String.format("%.2f", finalConfidence * 100))
                             .append("%)\n");
+                    detectedCount++;
                 }
             }
         }
 
+        final int total = detectedCount;
+        runOnUiThread(() -> txtJumlahDeteksi.setText("Jumlah Deteksi: " + total));
+
         return result.length() > 9 ? result.toString() : "Tidak ada objek terdeteksi";
     }
+
 
     @Override
     protected void onDestroy() {

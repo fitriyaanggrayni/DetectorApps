@@ -121,14 +121,17 @@ public class GambarActivity extends AppCompatActivity {
                 JSONObject jsonResponse = new JSONObject(response.toString());
 
                 String imageUrl = "";
+                String fileName = "";
                 if (jsonResponse.has("files")) {
                     JSONArray files = jsonResponse.getJSONArray("files");
                     if (files.length() > 0) {
                         JSONObject latestFile = files.getJSONObject(0);
                         imageUrl = latestFile.getString("url");
+                        fileName = latestFile.getString("name");
                     }
-                } else if (jsonResponse.has("url")) {
+                } else if (jsonResponse.has("url") && jsonResponse.has("name")) {
                     imageUrl = jsonResponse.getString("url");
+                    fileName = jsonResponse.getString("name");
                 }
 
 // Buat variabel final
@@ -136,8 +139,9 @@ public class GambarActivity extends AppCompatActivity {
 
                 if (!finalImageUrl.equals(lastImageUrl)) {
                     lastImageUrl = finalImageUrl;
+                    final String finalFileName = fileName;
                     runOnUiThread(() -> {
-                        txtFileName.setText("Gambar Terbaru");
+                        txtFileName.setText("Gambar Terbaru: " + finalFileName);
                         loadImageAndProcess(finalImageUrl); // gunakan yang final
                     });
 

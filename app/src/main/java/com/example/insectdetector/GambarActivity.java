@@ -33,6 +33,10 @@ import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.Map;
+import java.util.HashMap;
+
+
 public class GambarActivity extends AppCompatActivity {
     private BoundingBoxDrawer boxDrawer;
     private ImageView imgGambar;
@@ -54,7 +58,7 @@ public class GambarActivity extends AppCompatActivity {
         imgGambar = findViewById(R.id.imgGambar);
         txtFileName = findViewById(R.id.txtFileName);
         txtDetectionResult = findViewById(R.id.txtDetectionResult);
-        txtJumlahDeteksi = findViewById(R.id.txtJumlahDeteksi);
+       // txtJumlahDeteksi = findViewById(R.id.txtJumlahDeteksi);
 
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
@@ -229,24 +233,28 @@ public class GambarActivity extends AppCompatActivity {
     }
 
     private String parseDetectionOutput(List<NMS_Activity.Detection> detections) {
-        StringBuilder result = new StringBuilder("Deteksi:\n");
-        int detectedCount = 0;
+        StringBuilder result = new StringBuilder();
+        int totalDeteksi = 0;
+        Map<String, Integer> labelCounts = new HashMap<>();
 
         for (NMS_Activity.Detection detection : detections) {
             String label = labels.get(detection.classId);
-            result.append(label)
-                    .append(" (")
-                    .append(String.format("%.2f", detection.confidence * 100))
-                    .append("%)\n");
-            detectedCount++;
+            labelCounts.put(label, labelCounts.getOrDefault(label, 0) + 1);
+            totalDeteksi++;
         }
 
-        final int total = detectedCount;
-        runOnUiThread(() -> txtJumlahDeteksi.setText("Jumlah Deteksi: " + total));
+        result.append("Jumlah Deteksi:\n");
+        for (Map.Entry<String, Integer> entry : labelCounts.entrySet()) {
+            result.append(entry.getKey())
+                    .append(" = ")
+                    .append(entry.getValue())
+                    .append("\n");
+        }
+        result.append("Total Serangga = ").append(totalDeteksi);
 
-        return result.length() > 9 ? result.toString() : "Tidak ada objek terdeteksi";
+        return totalDeteksi > 0 ? result.toString() : "Tidak ada objek terdeteksi";
     }
-
+    
     @Override
     protected void onDestroy() {
         super.onDestroy();

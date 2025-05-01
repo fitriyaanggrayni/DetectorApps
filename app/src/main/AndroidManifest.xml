@@ -7,7 +7,10 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-feature android:glEsVersion="0x00020000" android:required="true"/>
+
+    <uses-feature
+        android:glEsVersion="0x00020000"
+        android:required="true" />
 
     <application
         android:allowBackup="true"
@@ -20,15 +23,23 @@
         android:theme="@style/Theme.InsectDetector"
         tools:targetApi="31">
         <activity
-            android:name=".GambarActivity"
+            android:name=".ResetPasswordActivity"
             android:exported="false" />
-        <!-- Activity untuk Lokasi -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="false" />
+        <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".GambarActivity"
+            android:exported="false" /> <!-- Activity untuk Lokasi -->
         <activity
             android:name=".LokasiActivity"
             android:exported="true"
             android:label="@string/title_lokasi" />
         <activity
-            android:name=".MainActivity"
+            android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

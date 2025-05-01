@@ -35,21 +35,15 @@ import java.util.List;
 
 public class GambarActivity extends AppCompatActivity {
     private BoundingBoxDrawer boxDrawer;
-
     private ImageView imgGambar;
     private TextView txtFileName, txtDetectionResult;
-
     private final Handler handler = new Handler();
     private final int REFRESH_INTERVAL = 5000;
     private String lastImageUrl = "";
-
     private Interpreter tflite;
     private List<String> labels;
-
     private final int IMAGE_SIZE = 640;
-
     private final String GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfEYCdK3_hgfS9A3TzJprOVETYkepVhFg8C1lQz8-tH8WkrQUJnz22GqDlT5RZYrcjxg/exec?func=ESP32CAM&ID_FOLDER=1bmf4fh86xDNUnPLwoC2jmmPPuId-1lKd";
-
     private TextView txtJumlahDeteksi;
 
     @Override
@@ -62,11 +56,10 @@ public class GambarActivity extends AppCompatActivity {
         txtDetectionResult = findViewById(R.id.txtDetectionResult);
         txtJumlahDeteksi = findViewById(R.id.txtJumlahDeteksi);
 
-
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
             labels = loadLabels();
-            boxDrawer = new BoundingBoxDrawer(labels, IMAGE_SIZE); // pindahkan ke sini
+            boxDrawer = new BoundingBoxDrawer(labels, IMAGE_SIZE, 0.7f); // threshold 0.7
         } catch (IOException e) {
             Log.e("TFLite", "Gagal memuat model atau label", e);
         }
@@ -103,7 +96,6 @@ public class GambarActivity extends AppCompatActivity {
         return loadedLabels;
     }
 
-
     private void fetchLatestFileFromDrive() {
         new Thread(() -> {
             try {
@@ -137,7 +129,6 @@ public class GambarActivity extends AppCompatActivity {
                     fileName = jsonResponse.getString("name");
                 }
 
-// Buat variabel final
                 final String finalImageUrl = getValidGoogleDriveUrl(imageUrl);
 
                 if (!finalImageUrl.equals(lastImageUrl)) {
@@ -145,7 +136,7 @@ public class GambarActivity extends AppCompatActivity {
                     final String finalFileName = fileName;
                     runOnUiThread(() -> {
                         txtFileName.setText("Gambar Terbaru: " + finalFileName);
-                        loadImageAndProcess(finalImageUrl); // gunakan yang final
+                        loadImageAndProcess(finalImageUrl);
                     });
 
                 }
@@ -189,9 +180,9 @@ public class GambarActivity extends AppCompatActivity {
         bitmap.getPixels(intValues, 0, IMAGE_SIZE, 0, 0, IMAGE_SIZE, IMAGE_SIZE);
 
         for (int pixel : intValues) {
-            byteBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f); // Red
-            byteBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);  // Green
-            byteBuffer.putFloat((pixel & 0xFF) / 255.0f);         // Blue
+            byteBuffer.putFloat(((pixel >> 16) & 0xFF) / 255.0f);
+            byteBuffer.putFloat(((pixel >> 8) & 0xFF) / 255.0f);
+            byteBuffer.putFloat((pixel & 0xFF) / 255.0f);
         }
         return byteBuffer;
     }
@@ -205,26 +196,12 @@ public class GambarActivity extends AppCompatActivity {
         float[][][] output = new float[1][25200][7];
         tflite.run(inputBuffer, output);
 
-        Bitmap annotated = boxDrawer.draw(bitmap, output[0], 0.7f);
-        runOnUiThread(() -> imgGambar.setImageBitmap(annotated));
-
-        String hasilDeteksi = parseDetectionOutput(output);
-        runOnUiThread(() -> txtDetectionResult.setText(hasilDeteksi));
-    }
-
-
-    private String parseDetectionOutput(float[][][] output) {
-        float confidenceThreshold = 0.7f;
-        StringBuilder result = new StringBuilder("Deteksi:\n");
-        int detectedCount = 0;
-
+        List<NMS_Activity.Detection> detections = new ArrayList<>();
         for (float[] detection : output[0]) {
             float objectness = detection[4];
-
-            if (objectness > confidenceThreshold) {
+            if (objectness > 0.7f) {
                 float maxClassScore = 0;
                 int classIndex = -1;
-
                 for (int i = 5; i < detection.length; i++) {
                     if (detection[i] > maxClassScore) {
                         maxClassScore = detection[i];
@@ -233,16 +210,35 @@ public class GambarActivity extends AppCompatActivity {
                 }
 
                 float finalConfidence = objectness * maxClassScore;
-
-                if (finalConfidence > confidenceThreshold && classIndex >= 0 && classIndex < labels.size()) {
-                    String label = labels.get(classIndex);
-                    result.append(label)
-                            .append(" (")
-                            .append(String.format("%.2f", finalConfidence * 100))
-                            .append("%)\n");
-                    detectedCount++;
+                if (finalConfidence > 0.7f && classIndex >= 0 && classIndex < labels.size()) {
+                    detections.add(new NMS_Activity.Detection(
+                            detection[0], detection[1], detection[2], detection[3],
+                            finalConfidence, classIndex
+                    ));
                 }
             }
+        }
+
+        List<NMS_Activity.Detection> finalDetections = NMS_Activity.nonMaxSuppression(detections, 0.7f);
+
+        Bitmap annotated = boxDrawer.draw(bitmap, finalDetections);
+        runOnUiThread(() -> imgGambar.setImageBitmap(annotated));
+
+        String hasilDeteksi = parseDetectionOutput(finalDetections);
+        runOnUiThread(() -> txtDetectionResult.setText(hasilDeteksi));
+    }
+
+    private String parseDetectionOutput(List<NMS_Activity.Detection> detections) {
+        StringBuilder result = new StringBuilder("Deteksi:\n");
+        int detectedCount = 0;
+
+        for (NMS_Activity.Detection detection : detections) {
+            String label = labels.get(detection.classId);
+            result.append(label)
+                    .append(" (")
+                    .append(String.format("%.2f", detection.confidence * 100))
+                    .append("%)\n");
+            detectedCount++;
         }
 
         final int total = detectedCount;
@@ -250,7 +246,6 @@ public class GambarActivity extends AppCompatActivity {
 
         return result.length() > 9 ? result.toString() : "Tidak ada objek terdeteksi";
     }
-
 
     @Override
     protected void onDestroy() {

@@ -6,62 +6,56 @@ import java.util.List;
 public class BoundingBoxDrawer {
     private List<String> labels;
     private int imageSize;
+    private float threshold;
 
-    public BoundingBoxDrawer(List<String> labels, int imageSize) {
+    // Tambahkan daftar warna
+    private final int[] classColors = {
+            Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, Color.CYAN, Color.YELLOW, Color.GRAY, Color.WHITE
+    };
+
+    public BoundingBoxDrawer(List<String> labels, int imageSize, float threshold) {
         this.labels = labels;
         this.imageSize = imageSize;
+        this.threshold = threshold;
     }
 
-    public Bitmap draw(Bitmap bitmap, float[][] detections, float threshold) {
-        Bitmap mutableBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
-        Canvas canvas = new Canvas(mutableBitmap);
+    public Bitmap draw(Bitmap bitmap, List<NMS_Activity.Detection> detections) {
+        Bitmap annotatedBitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true);
+        Canvas canvas = new Canvas(annotatedBitmap);
 
         Paint boxPaint = new Paint();
-        boxPaint.setColor(Color.RED);
         boxPaint.setStyle(Paint.Style.STROKE);
-        boxPaint.setStrokeWidth(4);
+        boxPaint.setStrokeWidth(3);
 
         Paint textPaint = new Paint();
-        textPaint.setColor(Color.WHITE);
         textPaint.setTextSize(30);
-        textPaint.setStyle(Paint.Style.FILL);
+        textPaint.setFakeBoldText(true);
 
-        for (float[] detection : detections) {
-            float x = detection[0];
-            float y = detection[1];
-            float w = detection[2];
-            float h = detection[3];
-            float objectness = detection[4];
+        for (NMS_Activity.Detection detection : detections) {
+            if (detection.confidence >= threshold) {
+                float cx = detection.x * imageSize;
+                float cy = detection.y * imageSize;
+                float w = detection.width * imageSize;
+                float h = detection.height * imageSize;
 
-            if (objectness > threshold) {
-                float maxClassScore = 0;
-                int classIndex = -1;
+                float left = cx - w / 2;
+                float top = cy - h / 2;
+                float right = cx + w / 2;
+                float bottom = cy + h / 2;
 
-                for (int i = 5; i < detection.length; i++) {
-                    if (detection[i] > maxClassScore) {
-                        maxClassScore = detection[i];
-                        classIndex = i - 5;
-                    }
-                }
+                int color = classColors[detection.classId % classColors.length];  // Ambil warna berdasarkan classId
 
-                float finalConfidence = objectness * maxClassScore;
+                boxPaint.setColor(color);
+                textPaint.setColor(color);
 
-                if (finalConfidence > threshold && classIndex >= 0 && classIndex < labels.size()) {
-                    int left = (int)((x - w / 2) * imageSize);
-                    int top = (int)((y - h / 2) * imageSize);
-                    int right = (int)((x + w / 2) * imageSize);
-                    int bottom = (int)((y + h / 2) * imageSize);
+                RectF rect = new RectF(left, top, right, bottom);
+                canvas.drawRect(rect, boxPaint);
 
-                    canvas.drawRect(left, top, right, bottom, boxPaint);
-
-                    String label = labels.get(classIndex);
-                    String text = label + " (" + String.format("%.1f", finalConfidence * 100) + "%)";
-                    canvas.drawText(text, left, top - 10, textPaint);
-                }
+                String label = String.format("%s %.2f%%", labels.get(detection.classId), detection.confidence * 100);
+                canvas.drawText(label, left, top - 10, textPaint);
             }
         }
 
-        return mutableBitmap;
+        return annotatedBitmap;
     }
 }
-

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GambarActivity extends AppCompatActivity {
+    private BoundingBoxDrawer boxDrawer;
 
     private ImageView imgGambar;
     private TextView txtFileName, txtDetectionResult;
@@ -65,6 +66,7 @@ public class GambarActivity extends AppCompatActivity {
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
             labels = loadLabels();
+            boxDrawer = new BoundingBoxDrawer(labels, IMAGE_SIZE); // pindahkan ke sini
         } catch (IOException e) {
             Log.e("TFLite", "Gagal memuat model atau label", e);
         }
@@ -100,6 +102,7 @@ public class GambarActivity extends AppCompatActivity {
         }
         return loadedLabels;
     }
+
 
     private void fetchLatestFileFromDrive() {
         new Thread(() -> {
@@ -202,9 +205,13 @@ public class GambarActivity extends AppCompatActivity {
         float[][][] output = new float[1][25200][7];
         tflite.run(inputBuffer, output);
 
-        String resultText = parseDetectionOutput(output);
-        runOnUiThread(() -> txtDetectionResult.setText(resultText));
+        Bitmap annotated = boxDrawer.draw(bitmap, output[0], 0.7f);
+        runOnUiThread(() -> imgGambar.setImageBitmap(annotated));
+
+        String hasilDeteksi = parseDetectionOutput(output);
+        runOnUiThread(() -> txtDetectionResult.setText(hasilDeteksi));
     }
+
 
     private String parseDetectionOutput(float[][][] output) {
         float confidenceThreshold = 0.7f;

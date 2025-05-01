@@ -18,16 +18,6 @@
             android:layout_marginTop="10dp" />
 
         <TextView
-            android:id="@+id/txtDetectionResult"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Deteksi Objek: -"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="10dp"
-            android:textAlignment="center"/>
-
-        <TextView
             android:id="@+id/txtFileName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -37,13 +27,14 @@
             android:textAlignment="center" />
 
         <TextView
-            android:id="@+id/txtJumlahDeteksi"
+            android:id="@+id/txtDetectionResult"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Jumlah Deteksi: 0"
+            android:text="Deteksi Objek: -"
             android:textSize="18sp"
             android:textStyle="bold"
-            android:layout_marginTop="8dp"/>
+            android:layout_marginTop="10dp"
+            android:textAlignment="center"/>
 
     </LinearLayout>
 </ScrollView>

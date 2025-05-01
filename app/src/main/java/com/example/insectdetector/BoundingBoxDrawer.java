@@ -53,7 +53,10 @@ public class BoundingBoxDrawer {
                     int bottom = (int)((y + h / 2) * imageSize);
 
                     canvas.drawRect(left, top, right, bottom, boxPaint);
-                    canvas.drawText(labels.get(classIndex), left, top - 10, textPaint);
+
+                    String label = labels.get(classIndex);
+                    String text = label + " (" + String.format("%.1f", finalConfidence * 100) + "%)";
+                    canvas.drawText(text, left, top - 10, textPaint);
                 }
             }
         }
@@ -61,3 +64,4 @@ public class BoundingBoxDrawer {
         return mutableBitmap;
     }
 }
+

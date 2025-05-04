@@ -32,9 +32,18 @@ import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-
 import java.util.Map;
 import java.util.HashMap;
+
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import com.google.firebase.firestore.FieldValue;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 
 public class GambarActivity extends AppCompatActivity {
@@ -44,11 +53,11 @@ public class GambarActivity extends AppCompatActivity {
     private final Handler handler = new Handler();
     private final int REFRESH_INTERVAL = 5000;
     private String lastImageUrl = "";
+    private String lastFileName = "";
     private Interpreter tflite;
     private List<String> labels;
     private final int IMAGE_SIZE = 640;
     private final String GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfEYCdK3_hgfS9A3TzJprOVETYkepVhFg8C1lQz8-tH8WkrQUJnz22GqDlT5RZYrcjxg/exec?func=ESP32CAM&ID_FOLDER=1bmf4fh86xDNUnPLwoC2jmmPPuId-1lKd";
-    private TextView txtJumlahDeteksi;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -58,12 +67,11 @@ public class GambarActivity extends AppCompatActivity {
         imgGambar = findViewById(R.id.imgGambar);
         txtFileName = findViewById(R.id.txtFileName);
         txtDetectionResult = findViewById(R.id.txtDetectionResult);
-       // txtJumlahDeteksi = findViewById(R.id.txtJumlahDeteksi);
 
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
             labels = loadLabels();
-            boxDrawer = new BoundingBoxDrawer(labels, IMAGE_SIZE, 0.7f); // threshold 0.7
+            boxDrawer = new BoundingBoxDrawer(labels, IMAGE_SIZE, 0.5f);
         } catch (IOException e) {
             Log.e("TFLite", "Gagal memuat model atau label", e);
         }
@@ -137,12 +145,11 @@ public class GambarActivity extends AppCompatActivity {
 
                 if (!finalImageUrl.equals(lastImageUrl)) {
                     lastImageUrl = finalImageUrl;
-                    final String finalFileName = fileName;
+                    lastFileName = fileName;
                     runOnUiThread(() -> {
-                        txtFileName.setText("Gambar Terbaru: " + finalFileName);
+                        txtFileName.setText("Gambar Terbaru: " + lastFileName);
                         loadImageAndProcess(finalImageUrl);
                     });
-
                 }
             } catch (Exception e) {
                 Log.e("DriveFetch", "Gagal mengambil gambar dari Google Drive", e);
@@ -203,7 +210,7 @@ public class GambarActivity extends AppCompatActivity {
         List<NMS_Activity.Detection> detections = new ArrayList<>();
         for (float[] detection : output[0]) {
             float objectness = detection[4];
-            if (objectness > 0.7f) {
+            if (objectness > 0.5) {
                 float maxClassScore = 0;
                 int classIndex = -1;
                 for (int i = 5; i < detection.length; i++) {
@@ -214,7 +221,7 @@ public class GambarActivity extends AppCompatActivity {
                 }
 
                 float finalConfidence = objectness * maxClassScore;
-                if (finalConfidence > 0.7f && classIndex >= 0 && classIndex < labels.size()) {
+                if (finalConfidence > 0.5 && classIndex >= 0 && classIndex < labels.size()) {
                     detections.add(new NMS_Activity.Detection(
                             detection[0], detection[1], detection[2], detection[3],
                             finalConfidence, classIndex
@@ -223,13 +230,17 @@ public class GambarActivity extends AppCompatActivity {
             }
         }
 
-        List<NMS_Activity.Detection> finalDetections = NMS_Activity.nonMaxSuppression(detections, 0.7f);
+        List<NMS_Activity.Detection> finalDetections = NMS_Activity.nonMaxSuppression(detections, 0.5f);
 
         Bitmap annotated = boxDrawer.draw(bitmap, finalDetections);
         runOnUiThread(() -> imgGambar.setImageBitmap(annotated));
 
         String hasilDeteksi = parseDetectionOutput(finalDetections);
-        runOnUiThread(() -> txtDetectionResult.setText(hasilDeteksi));
+        runOnUiThread(() -> {
+            txtDetectionResult.setText(hasilDeteksi);
+            kirimKeRealtimeDatabase(hasilDeteksi);
+            simpanKeFirestore(hasilDeteksi, lastFileName);
+        });
     }
 
     private String parseDetectionOutput(List<NMS_Activity.Detection> detections) {
@@ -243,6 +254,10 @@ public class GambarActivity extends AppCompatActivity {
             totalDeteksi++;
         }
 
+        if (totalDeteksi == 0) {
+            return "Tidak ada objek terdeteksi";
+        }
+
         result.append("Jumlah Deteksi:\n");
         for (Map.Entry<String, Integer> entry : labelCounts.entrySet()) {
             result.append(entry.getKey())
@@ -251,10 +266,43 @@ public class GambarActivity extends AppCompatActivity {
                     .append("\n");
         }
         result.append("Total Serangga = ").append(totalDeteksi);
-
-        return totalDeteksi > 0 ? result.toString() : "Tidak ada objek terdeteksi";
+        return result.toString();
     }
-    
+
+    private void kirimKeRealtimeDatabase(String hasilDeteksi) {
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        DatabaseReference ref = database.getReference("Hasil Deteksi");
+
+        // Format timestamp ke tanggal dan waktu
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        String waktuSekarang = sdf.format(new Date());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hasil", hasilDeteksi);
+        data.put("timestamp", waktuSekarang); // timestamp dalam format terbaca manusia
+
+        ref.setValue(data)
+                .addOnSuccessListener(aVoid -> Log.d("Firebase", "Realtime DB Berhasil"))
+                .addOnFailureListener(e -> Log.e("Firebase", "Gagal simpan Realtime DB", e));
+    }
+
+
+    private void simpanKeFirestore(String hasilDeteksi, String fileName) {
+        FirebaseFirestore firestore = FirebaseFirestore.getInstance();
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("hasil", hasilDeteksi);
+        data.put("nama_file", fileName);
+        data.put("timestamp", FieldValue.serverTimestamp()); // Pakai waktu server
+
+        firestore.collection("riwayat_deteksi")
+                .add(data)
+                .addOnSuccessListener(documentReference -> Log.d("Firebase", "Firestore Berhasil"))
+                .addOnFailureListener(e -> Log.e("Firebase", "Gagal simpan Firestore", e));
+
+    }
+
+
     @Override
     protected void onDestroy() {
         super.onDestroy();

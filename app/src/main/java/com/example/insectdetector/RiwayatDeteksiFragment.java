@@ -21,8 +21,8 @@ import java.util.List;
 public class RiwayatDeteksiFragment extends Fragment {
 
     private RecyclerView recyclerView;
-    private RiwayatAdapter adapter;  
-    private List<RiwayatModel> riwayatList;  
+    private RiwayatDeteksiAdapter adapter;
+    private List<RiwayatDeteksiModel> riwayatList;
 
     public RiwayatDeteksiFragment() {}
 
@@ -32,33 +32,26 @@ public class RiwayatDeteksiFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_riwayat_deteksi, container, false);
 
-        // Menghubungkan RecyclerView
         recyclerView = view.findViewById(R.id.recyclerDeteksi);
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
-        // Inisialisasi list untuk menyimpan data model
         riwayatList = new ArrayList<>();
-
-        // Adapter digunakan untuk RecyclerView
-        adapter = new RiwayatAdapter(riwayatList);
+        adapter = new RiwayatDeteksiAdapter(riwayatList);
         recyclerView.setAdapter(adapter);
 
-        // Memanggil method untuk load data dari Firestore
         loadDataFromFirestore();
 
         return view;
     }
 
-    // Memuat data dari Firestore
     private void loadDataFromFirestore() {
         FirebaseFirestore.getInstance().collection("riwayat_deteksi")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     riwayatList.clear();
-                    // Iterasi untuk mengambil setiap document dari Firestore
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                        RiwayatModel model = doc.toObject(RiwayatModel.class);
+                        RiwayatDeteksiModel model = doc.toObject(RiwayatDeteksiModel.class);
                         riwayatList.add(model);
                     }
                     adapter.notifyDataSetChanged();

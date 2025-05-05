@@ -48,7 +48,15 @@ dependencies {
 
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
     implementation("com.google.firebase:firebase-auth")
-    implementation("com.google.firebase:firebase-database")
+    implementation("com.google.firebase:firebase-database:21.0.0")
+    implementation("com.google.firebase:firebase-firestore:25.1.4")
+
+    implementation ("com.firebaseui:firebase-ui-firestore:8.0.0")
+    implementation ("com.google.firebase:firebase-core:21.1.1")
+    implementation ("androidx.viewpager2:viewpager2:1.1.0")
+    implementation ("com.google.android.material:material:1.12.0")
+    implementation ("com.google.code.gson:gson:2.8.8")
+
 
     implementation("org.tensorflow:tensorflow-lite:0.1.0")
 

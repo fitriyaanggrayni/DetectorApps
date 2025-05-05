@@ -22,6 +22,10 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.InsectDetector"
         tools:targetApi="31">
+
+        <activity
+            android:name=".RiwayatActivity" />
+
         <activity
             android:name=".ResetPasswordActivity"
             android:exported="false" />
@@ -33,7 +37,7 @@
             android:exported="false" />
         <activity
             android:name=".GambarActivity"
-            android:exported="false" /> <!-- Activity untuk Lokasi -->
+            android:exported="false" />
         <activity
             android:name=".LokasiActivity"
             android:exported="true"

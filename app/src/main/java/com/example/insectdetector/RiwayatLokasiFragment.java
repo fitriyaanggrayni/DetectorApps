@@ -9,6 +9,7 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
+
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -34,7 +35,7 @@ public class RiwayatLokasiFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         lokasiList = new ArrayList<>();
-        adapter = new RiwayatLokasiAdapter(lokasiList);
+        adapter = new RiwayatLokasiAdapter(lokasiList, getContext());
         recyclerView.setAdapter(adapter);
 
         loadDataFromFirestore();
@@ -50,7 +51,10 @@ public class RiwayatLokasiFragment extends Fragment {
                     lokasiList.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         RiwayatLokasiModel model = doc.toObject(RiwayatLokasiModel.class);
-                        lokasiList.add(model);
+                        if (model != null) {
+                            model.setDocumentId(doc.getId()); // set documentId di model
+                            lokasiList.add(model);
+                        }
                     }
                     adapter.notifyDataSetChanged();
                 });

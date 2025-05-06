@@ -36,7 +36,7 @@ public class RiwayatDeteksiFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
 
         riwayatList = new ArrayList<>();
-        adapter = new RiwayatDeteksiAdapter(riwayatList);
+        adapter = new RiwayatDeteksiAdapter(getContext(), riwayatList);
         recyclerView.setAdapter(adapter);
 
         loadDataFromFirestore();

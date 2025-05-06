@@ -6,6 +6,7 @@ public class RiwayatLokasiModel {
     private double latitude;
     private double longitude;
     private Timestamp timestamp;
+    private String documentId; // ID dokumen Firestore
 
     public RiwayatLokasiModel() {}
 
@@ -23,8 +24,15 @@ public class RiwayatLokasiModel {
         return longitude;
     }
 
-
     public Timestamp getTimestamp() {
         return timestamp;
+    }
+
+    public String getDocumentId() {
+        return documentId;
+    }
+
+    public void setDocumentId(String documentId) {
+        this.documentId = documentId;
     }
 }

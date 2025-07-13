@@ -18,6 +18,9 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.Locale;
 
+import com.google.android.material.chip.Chip;
+
+
 public class RiwayatDeteksiAdapter extends RecyclerView.Adapter<RiwayatDeteksiAdapter.ViewHolder> {
     private final Context context;
     private final List<RiwayatDeteksiModel> dataList;
@@ -31,20 +34,19 @@ public class RiwayatDeteksiAdapter extends RecyclerView.Adapter<RiwayatDeteksiAd
 
     @NonNull
     @Override
-    public RiwayatDeteksiAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(context).inflate(R.layout.item_riwayat_deteksi, parent, false);
         return new ViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull RiwayatDeteksiAdapter.ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         RiwayatDeteksiModel model = dataList.get(position);
-
         Timestamp timestamp = model.getTimestamp();
         String waktu = timestamp != null ? dateFormat.format(timestamp.toDate()) : "Tidak tersedia";
 
         holder.textFile.setText(model.getNamaFile());
-        holder.textHasil.setText(model.getHasil());
+        holder.textHasilDeteksi.setText(model.getHasil());
         holder.textWaktu.setText(waktu);
 
         holder.buttonHapus.setOnClickListener(v -> {
@@ -68,7 +70,6 @@ public class RiwayatDeteksiAdapter extends RecyclerView.Adapter<RiwayatDeteksiAd
                     .setNegativeButton("Batal", null)
                     .show();
         });
-
     }
 
     @Override
@@ -77,15 +78,18 @@ public class RiwayatDeteksiAdapter extends RecyclerView.Adapter<RiwayatDeteksiAd
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView textFile, textHasil, textWaktu;
+        TextView textFile, textWaktu;
+        TextView textHasilDeteksi;
+
         Button buttonHapus;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             textFile = itemView.findViewById(R.id.textNamaFile);
-            textHasil = itemView.findViewById(R.id.textHasil);
+            textHasilDeteksi = itemView.findViewById(R.id.textHasilDeteksi);
             textWaktu = itemView.findViewById(R.id.textTimestamp);
             buttonHapus = itemView.findViewById(R.id.buttonHapus);
         }
     }
+
 }

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Custom Text Appearances -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">@font/poppins_medium</item>
+    </style>
+
+    <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:fontFamily">@font/poppins_regular</item>
+    </style>
+
+    <!-- Card Styles -->
+    <style name="Widget.App.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardCornerRadius">16dp</item>
+        <item name="cardElevation">2dp</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="Widget.App.Button.Icon" parent="Widget.Material3.Button.IconButton">
+        <item name="iconTint">@color/on_surface_variant</item>
+        <item name="rippleColor">@color/primary_container</item>
+    </style>
+
+    <!-- Chip Styles -->
+    <style name="Widget.App.Chip.Status" parent="Widget.Material3.Chip.Suggestion">
+        <item name="chipBackgroundColor">@color/tertiary_container</item>
+        <item name="android:textColor">@color/on_tertiary_container</item>
+        <item name="chipStrokeWidth">0dp</item>
+        <item name="chipMinHeight">28dp</item>
+    </style>
+</resources>

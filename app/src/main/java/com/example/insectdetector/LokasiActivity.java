@@ -20,6 +20,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -72,7 +73,7 @@ public class LokasiActivity extends FragmentActivity implements OnMapReadyCallba
                     txtLatitude.setText("Latitude: " + latitude);
                     txtLongitude.setText("Longitude: " + longitude);
 
-                    // Simpan ke Firestore
+                    // Simpan ke Firestore (maksimal 20 data)
                     simpanLokasiKeFirestore(latitude, longitude);
                 }
             }
@@ -90,13 +91,30 @@ public class LokasiActivity extends FragmentActivity implements OnMapReadyCallba
         Map<String, Object> dataLokasi = new HashMap<>();
         dataLokasi.put("latitude", latitude);
         dataLokasi.put("longitude", longitude);
-        dataLokasi.put("timestamp", new Date());  // Waktu lokal perangkat
+        dataLokasi.put("timestamp", new Date());
 
         firestore.collection("riwayat_lokasi")
-                .add(dataLokasi)
-                .addOnSuccessListener(documentReference ->
-                        Log.d("Firestore", "Lokasi disimpan"))
-                .addOnFailureListener(e ->
-                        Log.e("Firestore", "Gagal simpan lokasi", e));
+                .orderBy("timestamp")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (queryDocumentSnapshots.size() >= 20) {
+                        // Hapus semua dokumen yang melebihi 19 (simpan 19 + 1 data baru)
+                        int totalToDelete = queryDocumentSnapshots.size() - 19;
+                        for (int i = 0; i < totalToDelete; i++) {
+                            firestore.collection("riwayat_lokasi")
+                                    .document(queryDocumentSnapshots.getDocuments().get(i).getId())
+                                    .delete();
+                        }
+                    }
+
+                    // Simpan data baru
+                    firestore.collection("riwayat_lokasi")
+                            .add(dataLokasi)
+                            .addOnSuccessListener(documentReference ->
+                                    Log.d("Firestore", "Lokasi disimpan"))
+                            .addOnFailureListener(e ->
+                                    Log.e("Firestore", "Gagal simpan lokasi", e));
+                })
+                .addOnFailureListener(e -> Log.e("Firestore", "Gagal mengambil dokumen", e));
     }
 }

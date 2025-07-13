@@ -39,11 +39,16 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import com.google.firebase.firestore.FieldValue;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import android.view.View;
+import android.widget.ProgressBar;
+
+import android.content.Intent;
+import android.net.Uri;
 
 
 public class GambarActivity extends AppCompatActivity {
@@ -58,6 +63,11 @@ public class GambarActivity extends AppCompatActivity {
     private List<String> labels;
     private final int IMAGE_SIZE = 640;
     private final String GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfEYCdK3_hgfS9A3TzJprOVETYkepVhFg8C1lQz8-tH8WkrQUJnz22GqDlT5RZYrcjxg/exec?func=ESP32CAM&ID_FOLDER=1bmf4fh86xDNUnPLwoC2jmmPPuId-1lKd";
+    private ProgressBar progressBar;
+    private long startTime;
+    private static final int REQUEST_PICK_IMAGE = 100;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +77,13 @@ public class GambarActivity extends AppCompatActivity {
         imgGambar = findViewById(R.id.imgGambar);
         txtFileName = findViewById(R.id.txtFileName);
         txtDetectionResult = findViewById(R.id.txtDetectionResult);
+        progressBar = findViewById(R.id.progressBar);
+        findViewById(R.id.btnPilihGambarLokal).setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQUEST_PICK_IMAGE);
+        });
+
 
         try {
             tflite = new Interpreter(loadModelFile(), new Interpreter.Options());
@@ -107,6 +124,36 @@ public class GambarActivity extends AppCompatActivity {
         }
         return loadedLabels;
     }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_PICK_IMAGE && resultCode == RESULT_OK && data != null) {
+            Uri selectedImageUri = data.getData();
+            if (selectedImageUri != null) {
+                Glide.with(this)
+                        .asBitmap()
+                        .load(selectedImageUri)
+                        .diskCacheStrategy(DiskCacheStrategy.NONE)
+                        .skipMemoryCache(true)
+                        .into(new CustomTarget<Bitmap>() {
+                            @Override
+                            public void onResourceReady(Bitmap resource, Transition<? super Bitmap> transition) {
+                                imgGambar.setImageBitmap(resource);
+                                processImageWithTFLite(resource);
+                            }
+
+                            @Override
+                            public void onLoadCleared(Drawable placeholder) {}
+                        });
+
+                txtFileName.setText("Gambar dari galeri");
+                findViewById(R.id.loadingOverlay).setVisibility(View.VISIBLE);
+                startTime = System.currentTimeMillis();
+            }
+        }
+    }
+
 
     private void fetchLatestFileFromDrive() {
         new Thread(() -> {
@@ -166,6 +213,11 @@ public class GambarActivity extends AppCompatActivity {
     }
 
     private void loadImageAndProcess(String imageUrl) {
+        // Tampilkan loading
+        runOnUiThread(() -> findViewById(R.id.loadingOverlay).setVisibility(View.VISIBLE));
+        startTime = System.currentTimeMillis();
+
+
         Glide.with(this)
                 .asBitmap()
                 .load(imageUrl)
@@ -236,10 +288,15 @@ public class GambarActivity extends AppCompatActivity {
         runOnUiThread(() -> imgGambar.setImageBitmap(annotated));
 
         String hasilDeteksi = parseDetectionOutput(finalDetections);
+        long endTime = System.currentTimeMillis();
+        long detectionDuration = endTime - startTime;
+        double seconds = detectionDuration / 1000.0;
+        String hasilDeteksiAkhir = hasilDeteksi + "\n Waktu Deteksi: " + String.format(Locale.getDefault(), "%.2f", seconds) + " detik";
         runOnUiThread(() -> {
-            txtDetectionResult.setText(hasilDeteksi);
-            kirimKeRealtimeDatabase(hasilDeteksi);
-            simpanKeFirestore(hasilDeteksi, lastFileName);
+            txtDetectionResult.setText(hasilDeteksiAkhir);
+            kirimKeRealtimeDatabase(hasilDeteksiAkhir);
+            simpanKeFirestore(hasilDeteksiAkhir, lastFileName);
+            findViewById(R.id.loadingOverlay).setVisibility(View.GONE);
         });
     }
 
@@ -279,7 +336,7 @@ public class GambarActivity extends AppCompatActivity {
 
         Map<String, Object> data = new HashMap<>();
         data.put("hasil", hasilDeteksi);
-        data.put("timestamp", waktuSekarang); // timestamp dalam format terbaca manusia
+        data.put("timestamp", waktuSekarang); //
 
         ref.setValue(data)
                 .addOnSuccessListener(aVoid -> Log.d("Firebase", "Realtime DB Berhasil"))
@@ -287,26 +344,38 @@ public class GambarActivity extends AppCompatActivity {
     }
 
 
-    private void simpanKeFirestore(String hasilDeteksi, String fileName) {
+    private void simpanKeFirestore(String hasilDeteksiAkhir, String fileName) {
         FirebaseFirestore firestore = FirebaseFirestore.getInstance();
 
-        Map<String, Object> data = new HashMap<>();
-        data.put("hasil", hasilDeteksi);
-        data.put("nama_file", fileName);
-        data.put("timestamp", FieldValue.serverTimestamp()); // Pakai waktu server
-
         firestore.collection("riwayat_deteksi")
-                .add(data)
-                .addOnSuccessListener(documentReference -> Log.d("Firebase", "Firestore Berhasil"))
-                .addOnFailureListener(e -> Log.e("Firebase", "Gagal simpan Firestore", e));
+                .orderBy("timestamp")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    // Jika sudah ada 20 data, hapus yang paling lama
+                    if (queryDocumentSnapshots.size() >= 20) {
+                        int totalToDelete = queryDocumentSnapshots.size() - 19;
+                        for (int i = 0; i < totalToDelete; i++) {
+                            firestore.collection("riwayat_deteksi")
+                                    .document(queryDocumentSnapshots.getDocuments().get(i).getId())
+                                    .delete()
+                                    .addOnSuccessListener(aVoid -> Log.d("Firestore", "Deteksi lama dihapus"))
+                                    .addOnFailureListener(e -> Log.e("Firestore", "Gagal hapus deteksi lama", e));
+                        }
+                    }
 
+                    // Simpan deteksi baru
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("hasil", hasilDeteksiAkhir);
+                    data.put("nama_file", fileName);
+                    data.put("timestamp", new Date());
+
+                    firestore.collection("riwayat_deteksi")
+                            .add(data)
+                            .addOnSuccessListener(documentReference -> Log.d("Firestore", "Deteksi disimpan"))
+                            .addOnFailureListener(e -> Log.e("Firestore", "Gagal simpan deteksi", e));
+                })
+                .addOnFailureListener(e -> Log.e("Firestore", "Gagal membaca koleksi", e));
     }
 
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        handler.removeCallbacksAndMessages(null);
-        if (tflite != null) tflite.close();
-    }
 }

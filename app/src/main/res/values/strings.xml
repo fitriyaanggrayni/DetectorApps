@@ -1,4 +1,15 @@
+<!-- res/values/strings.xml -->
 <resources>
+    <!-- App name -->
     <string name="app_name">Insect Detector</string>
+
+    <!-- Navigation titles -->
     <string name="title_lokasi">Lokasi</string>
+
+    <!-- Detection screen strings -->
+    <string name="detection_results_title">Gambar Hasil Deteksi</string>
+    <string name="no_detection_performed">Belum ada deteksi yang dilakukan</string>
+    <string name="processing_image">Memproses Gambar...</string>
+    <string name="file_label">📁 File:</string>
+    <string name="detection_results_label">Hasil Deteksi</string>
 </resources>

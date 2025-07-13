@@ -18,6 +18,10 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton;
+import androidx.appcompat.app.AlertDialog;
+
+
 public class RiwayatDeteksiFragment extends Fragment {
 
     private RecyclerView recyclerView;
@@ -43,6 +47,35 @@ public class RiwayatDeteksiFragment extends Fragment {
 
         return view;
     }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        // Ambil tombol dari Activity
+        ExtendedFloatingActionButton fabClearAll = getActivity().findViewById(R.id.fabClearAll);
+
+        fabClearAll.setOnClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle("Konfirmasi")
+                    .setMessage("Apakah Anda yakin ingin menghapus semua riwayat deteksi?")
+                    .setPositiveButton("Hapus Semua", (dialog, which) -> {
+                        FirebaseFirestore.getInstance()
+                                .collection("riwayat_deteksi")
+                                .get()
+                                .addOnSuccessListener(querySnapshots -> {
+                                    for (DocumentSnapshot doc : querySnapshots) {
+                                        doc.getReference().delete();
+                                    }
+                                    riwayatList.clear();
+                                    adapter.notifyDataSetChanged();
+                                });
+                    })
+                    .setNegativeButton("Batal", null)
+                    .show();
+        });
+    }
+
 
     private void loadDataFromFirestore() {
         FirebaseFirestore.getInstance().collection("riwayat_deteksi")
